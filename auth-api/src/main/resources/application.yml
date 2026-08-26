@@ -21,3 +21,9 @@ spring:
 
 server:
   port: 8080
+
+auth:
+  jwt:
+    # Must be overridden in any non-local environment.
+    secret: ${JWT_SECRET_KEY:dev-only-insecure-secret-change-me-32-bytes-min}
+    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:30}

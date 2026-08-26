@@ -15,6 +15,15 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly 'org.postgresql:postgresql'
 
+    // Argon2id password hashing (matches the Python side's Argon2id).
+    implementation 'org.springframework.security:spring-security-crypto'
+    runtimeOnly 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+
+    // JWT issuance/validation.
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.testcontainers:junit-jupiter'
