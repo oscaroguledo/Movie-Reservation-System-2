@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: auth-api
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth_api}
+    username: ${DB_USER:auth_api}
+    password: ${DB_PASSWORD:auth_api}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only validates it matches the
+      # entity mappings at startup, mirroring the Python side's
+      # "no runtime schema creation" rule (Alembic-only there).
+      ddl-auto: validate
+
+  flyway:
+    schemas: auth_api
+    default-schema: auth_api
+
+server:
+  port: 8080
