@@ -5,7 +5,6 @@ import java.util.UUID;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -15,8 +14,12 @@ import jakarta.persistence.Table;
 @Table(name = "users", schema = "auth_api")
 public class User {
 
+    // Application-assigned, not @GeneratedValue: the write pipeline caches
+    // a fully-formed User in Redis and returns its id to the caller before
+    // the Kafka worker ever persists it to Postgres, so the id has to
+    // exist before Postgres is involved. (The migration's DEFAULT
+    // gen_random_uuid() stays only as a safety net for direct SQL.)
     @Id
-    @GeneratedValue
     private UUID id;
 
     @Column(name = "user_type", nullable = false, length = 20)
@@ -44,7 +47,8 @@ public class User {
         // for JPA
     }
 
-    public User(String email, String firstName, String lastName, String passwordHash, UserType userType) {
+    public User(UUID id, String email, String firstName, String lastName, String passwordHash, UserType userType) {
+        this.id = id;
         this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;

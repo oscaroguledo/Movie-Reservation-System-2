@@ -7,7 +7,8 @@ import java.time.ZoneOffset;
 import org.springframework.stereotype.Service;
 
 import auth.cache.RevokedTokenCacheService;
-import auth.model.RevokedToken;
+import auth.event.AuthEventPublisher;
+import auth.event.TokenRevoked;
 import auth.model.User;
 import auth.repository.RevokedTokenRepository;
 import auth.security.InvalidTokenException;
@@ -22,8 +23,10 @@ import io.jsonwebtoken.Claims;
  * the Python reference's "Redis is a cache-aside layer that can always
  * be rebuilt from it" design.
  *
- * <p>{@link #revoke} still writes straight to Postgres for now; routing
- * that write through Kafka + an async worker lands in a later step.
+ * <p>{@link #revoke} writes to Redis immediately (read-your-writes) and
+ * publishes a {@link TokenRevoked} event for the Kafka worker to persist
+ * to Postgres asynchronously — the full eventually-consistent pipeline,
+ * not a synchronous direct write.
  */
 @Service
 public class TokenService {
@@ -31,14 +34,17 @@ public class TokenService {
     private final JwtProvider jwtProvider;
     private final RevokedTokenRepository revokedTokenRepository;
     private final RevokedTokenCacheService revokedTokenCacheService;
+    private final AuthEventPublisher authEventPublisher;
 
     public TokenService(
             JwtProvider jwtProvider,
             RevokedTokenRepository revokedTokenRepository,
-            RevokedTokenCacheService revokedTokenCacheService) {
+            RevokedTokenCacheService revokedTokenCacheService,
+            AuthEventPublisher authEventPublisher) {
         this.jwtProvider = jwtProvider;
         this.revokedTokenRepository = revokedTokenRepository;
         this.revokedTokenCacheService = revokedTokenCacheService;
+        this.authEventPublisher = authEventPublisher;
     }
 
     public JwtProvider.IssuedToken issueAccessToken(User user) {
@@ -57,6 +63,6 @@ public class TokenService {
 
     public void revoke(String jti, Instant expiresAt) {
         revokedTokenCacheService.markRevoked(jti, expiresAt);
-        revokedTokenRepository.save(new RevokedToken(jti, OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC)));
+        authEventPublisher.publish(new TokenRevoked(jti, OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC)));
     }
 }

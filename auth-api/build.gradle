@@ -25,10 +25,15 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 
+    implementation 'org.springframework.kafka:spring-kafka'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
     testImplementation 'org.testcontainers:junit-jupiter'
     testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation 'org.awaitility:awaitility'
 }
 
 // Forward DOCKER_API_VERSION (if set) to the forked test JVM as the

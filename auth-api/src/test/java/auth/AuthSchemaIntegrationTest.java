@@ -32,7 +32,7 @@ class AuthSchemaIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void migratesSchemaAndPersistsAUser() {
-        User user = new User("jane@example.com", "Jane", "Doe", "hashed-password", UserType.ADMIN);
+        User user = new User(UUID.randomUUID(), "jane@example.com", "Jane", "Doe", "hashed-password", UserType.ADMIN);
 
         User saved = userRepository.save(user);
 

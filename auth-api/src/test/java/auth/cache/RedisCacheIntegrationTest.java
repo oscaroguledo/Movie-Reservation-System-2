@@ -9,7 +9,6 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import auth.IntegrationTestSupport;
 import auth.model.User;
@@ -31,8 +30,7 @@ class RedisCacheIntegrationTest extends IntegrationTestSupport {
 
     @Test
     void cachesAndEvictsAUserByIdAndEmail() {
-        User user = new User("jane@example.com", "Jane", "Doe", "hashed-password", UserType.ADMIN);
-        ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
+        User user = new User(UUID.randomUUID(), "jane@example.com", "Jane", "Doe", "hashed-password", UserType.ADMIN);
 
         userCacheService.put(user);
 

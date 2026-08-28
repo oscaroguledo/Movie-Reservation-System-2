@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import auth.model.User;
 import auth.model.UserType;
@@ -33,7 +32,13 @@ class JwtProviderTest {
     @Test
     void rejectsATamperedToken() {
         String token = jwtProvider.issueAccessToken(aUser()).token();
-        String tampered = token.substring(0, token.length() - 1) + (token.endsWith("a") ? "b" : "a");
+        // Flip a character in the middle of the signature segment, not
+        // the very last character: base64url's final character of a
+        // group can carry only padding bits, so mutating it sometimes
+        // decodes to the exact same bytes and the tamper is a no-op.
+        int i = token.length() / 2;
+        char flipped = token.charAt(i) == 'a' ? 'b' : 'a';
+        String tampered = token.substring(0, i) + flipped + token.substring(i + 1);
 
         assertThatThrownBy(() -> jwtProvider.parseAndValidate(tampered))
                 .isInstanceOf(InvalidTokenException.class);
@@ -49,8 +54,6 @@ class JwtProviderTest {
     }
 
     private static User aUser() {
-        User user = new User("jane@example.com", "Jane", "Doe", "hashed-password", UserType.REGULAR);
-        ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
-        return user;
+        return new User(UUID.randomUUID(), "jane@example.com", "Jane", "Doe", "hashed-password", UserType.REGULAR);
     }
 }

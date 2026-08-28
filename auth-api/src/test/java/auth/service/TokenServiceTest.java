@@ -2,19 +2,22 @@ package auth.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import auth.cache.RevokedTokenCacheService;
+import auth.event.AuthEventPublisher;
+import auth.event.TokenRevoked;
 import auth.model.User;
 import auth.model.UserType;
 import auth.repository.RevokedTokenRepository;
@@ -26,15 +29,15 @@ class TokenServiceTest {
     private final JwtProvider jwtProvider = new JwtProvider("test-secret-key-at-least-32-bytes-long!!", 30);
     private final RevokedTokenRepository revokedTokenRepository = mock(RevokedTokenRepository.class);
     private final RevokedTokenCacheService revokedTokenCacheService = mock(RevokedTokenCacheService.class);
+    private final AuthEventPublisher authEventPublisher = mock(AuthEventPublisher.class);
     private final TokenService tokenService =
-            new TokenService(jwtProvider, revokedTokenRepository, revokedTokenCacheService);
+            new TokenService(jwtProvider, revokedTokenRepository, revokedTokenCacheService, authEventPublisher);
 
     private User user;
 
     @BeforeEach
     void setUp() {
-        user = new User("jane@example.com", "Jane", "Doe", "hashed-password", UserType.REGULAR);
-        ReflectionTestUtils.setField(user, "id", UUID.randomUUID());
+        user = new User(UUID.randomUUID(), "jane@example.com", "Jane", "Doe", "hashed-password", UserType.REGULAR);
     }
 
     @Test
@@ -71,10 +74,15 @@ class TokenServiceTest {
     }
 
     @Test
-    void revokeWritesToBothRedisAndPostgres() {
-        tokenService.revoke("some-jti", java.time.Instant.now().plusSeconds(60));
+    void revokeMarksRedisImmediatelyAndPublishesAKafkaEventForPostgres() {
+        Instant expiresAt = Instant.now().plusSeconds(60);
 
-        verify(revokedTokenCacheService).markRevoked(anyString(), org.mockito.ArgumentMatchers.any());
-        verify(revokedTokenRepository).save(org.mockito.ArgumentMatchers.any());
+        tokenService.revoke("some-jti", expiresAt);
+
+        verify(revokedTokenCacheService).markRevoked("some-jti", expiresAt);
+        verify(authEventPublisher).publish(any(TokenRevoked.class));
+        // Postgres is no longer written to synchronously — that's the
+        // worker's job once it consumes the published event.
+        verify(revokedTokenRepository, never()).save(any());
     }
 }
