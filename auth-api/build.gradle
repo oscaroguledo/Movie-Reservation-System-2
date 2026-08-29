@@ -27,6 +27,9 @@ dependencies {
 
     implementation 'org.springframework.kafka:spring-kafka'
 
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     testImplementation 'org.springframework.kafka:spring-kafka-test'
@@ -34,6 +37,10 @@ dependencies {
     testImplementation 'org.testcontainers:postgresql'
     testImplementation 'org.testcontainers:kafka'
     testImplementation 'org.awaitility:awaitility'
+    // TestRestTemplate's default JDK HttpURLConnection-based client
+    // rejects the PATCH verb outright; Spring Boot auto-switches to
+    // Apache HttpClient (which supports it) once this is on the classpath.
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5'
 }
 
 // Forward DOCKER_API_VERSION (if set) to the forked test JVM as the

@@ -68,6 +68,23 @@ public class User {
         this.updatedAt = OffsetDateTime.now();
     }
 
+    /**
+     * Mutates the editable fields and stamps {@code updatedAt} directly.
+     * Used by {@code UserService} to update a copy that's about to be
+     * cached in Redis and returned to the caller — this instance is a
+     * plain value object at that point (round-tripped through Redis/JSON
+     * or freshly read), not a Hibernate-managed entity, so {@link
+     * #onUpdate()} won't fire for it; the actual Postgres row gets its
+     * updatedAt from that callback once {@code AuthEventWorker} persists
+     * it.
+     */
+    public void applyUpdate(String firstName, String lastName, String passwordHash) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.passwordHash = passwordHash;
+        this.updatedAt = OffsetDateTime.now();
+    }
+
     public UUID getId() {
         return id;
     }
