@@ -15,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.TestPropertySource;
 
 import auth.model.User;
 import auth.model.UserType;
@@ -24,8 +25,14 @@ import auth.service.TokenService;
  * Drives the real HTTP endpoints (embedded servlet container, real
  * security filter chain) end to end: register -&gt; login -&gt; access
  * -&gt; logout -&gt; rejected, plus self-or-admin authorization.
+ *
+ * <p>All these calls share one client IP (the embedded test server's
+ * loopback address), so the rate limit is raised well above what this
+ * class's own request volume could trip — {@link RateLimitIntegrationTest}
+ * covers the limiter itself.
  */
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@TestPropertySource(properties = "auth.rate-limit.max-requests=1000")
 class AuthFlowIntegrationTest extends IntegrationTestSupport {
 
     @Autowired

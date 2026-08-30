@@ -9,6 +9,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import auth.ratelimit.RateLimitFilter;
 import auth.security.JwtAuthenticationFilter;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -17,7 +18,8 @@ import jakarta.servlet.http.HttpServletResponse;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
+    public SecurityFilterChain filterChain(
+            HttpSecurity http, RateLimitFilter rateLimitFilter, JwtAuthenticationFilter jwtAuthenticationFilter)
             throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 // Spring Security's anonymous filter would otherwise hand
@@ -40,7 +42,8 @@ public class SecurityConfig {
                         .authenticated())
                 .exceptionHandling(eh -> eh.authenticationEntryPoint((request, response, authException) ->
                         response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
         return http.build();
     }
 }
