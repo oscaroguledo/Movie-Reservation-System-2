@@ -54,6 +54,14 @@ public class User {
         this.lastName = lastName;
         this.passwordHash = passwordHash;
         this.userType = userType;
+        // Stamped here (not left for @PrePersist alone) so a freshly
+        // registered User already has sane timestamps in the Redis-cached
+        // copy returned to the caller, ahead of the Kafka worker actually
+        // persisting it — @PrePersist below still re-stamps at the real
+        // insert, which is expected to land a little later.
+        OffsetDateTime now = OffsetDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
     }
 
     @PrePersist
