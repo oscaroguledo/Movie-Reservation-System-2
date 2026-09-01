@@ -40,6 +40,17 @@ spring:
 server:
   port: 8080
 
+management:
+  endpoint:
+    health:
+      # Surfaces per-dependency status (Postgres, Redis, Kafka — each
+      # auto-configured for free once their starters are on the
+      # classpath) at /actuator/health, matching the Python reference's
+      # /health doing a real "SELECT 1" against Postgres rather than a
+      # bare liveness stub. /actuator/** is permitAll in SecurityConfig,
+      # same as /health, so "always" (not "when-authorized") is right.
+      show-details: always
+
 auth:
   jwt:
     # Must be overridden in any non-local environment.

@@ -2,6 +2,7 @@ package auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -47,7 +48,7 @@ class AuthFlowIntegrationTest extends IntegrationTestSupport {
                 "email", "flow@example.com",
                 "firstName", "Flow",
                 "lastName", "User",
-                "password", "password123");
+                "password", "Password123!");
 
         ResponseEntity<Map> registerResponse = rest.postForEntity("/auth/register", registerBody, Map.class);
         assertThat(registerResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -60,7 +61,7 @@ class AuthFlowIntegrationTest extends IntegrationTestSupport {
         // Works immediately via Redis read-your-writes, ahead of the
         // Kafka worker necessarily having persisted the row yet.
         ResponseEntity<Map> loginResponse = rest.postForEntity(
-                "/auth/login", Map.of("email", "flow@example.com", "password", "password123"), Map.class);
+                "/auth/login", Map.of("email", "flow@example.com", "password", "Password123!"), Map.class);
         assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         String token = (String) loginResponse.getBody().get("accessToken");
         assertThat(token).isNotBlank();
@@ -91,7 +92,7 @@ class AuthFlowIntegrationTest extends IntegrationTestSupport {
                         "email", "userB@example.com",
                         "firstName", "B",
                         "lastName", "User",
-                        "password", "password123"),
+                        "password", "Password123!"),
                 Map.class);
         String userBId = (String) registerB.getBody().get("id");
 
@@ -109,12 +110,78 @@ class AuthFlowIntegrationTest extends IntegrationTestSupport {
     }
 
     @Test
+    void registerRejectsAWeakPassword() {
+        ResponseEntity<Map> response = rest.postForEntity(
+                "/auth/register",
+                Map.of(
+                        "email", "weak@example.com",
+                        "firstName", "Weak",
+                        "lastName", "Password",
+                        "password", "alllowercase1"),
+                Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void meReturnsTheCallersOwnProfile() {
+        String token = registerAndLogin("me@example.com");
+
+        ResponseEntity<Map> response =
+                rest.exchange("/users/me", HttpMethod.GET, new HttpEntity<>(authHeaders(token)), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("email")).isEqualTo("me@example.com");
+    }
+
+    @Test
+    void listingUsersIsAdminOnly() {
+        String regularToken = registerAndLogin("lister@example.com");
+
+        ResponseEntity<Map> asRegular = rest.exchange(
+                "/users", HttpMethod.GET, new HttpEntity<>(authHeaders(regularToken)), Map.class);
+        assertThat(asRegular.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        String adminToken = mintTokenFor(UserType.ADMIN);
+        ResponseEntity<List> asAdmin = rest.exchange(
+                "/users?limit=5", HttpMethod.GET, new HttpEntity<>(authHeaders(adminToken)), List.class);
+        assertThat(asAdmin.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(asAdmin.getBody()).isNotNull();
+    }
+
+    @Test
+    void registerAdminIsAdminOnly() {
+        Map<String, String> newAdminBody = Map.of(
+                "email", "newadmin@example.com",
+                "firstName", "New",
+                "lastName", "Admin",
+                "password", "Password123!");
+
+        String regularToken = registerAndLogin("nonadmin@example.com");
+        ResponseEntity<Map> asRegular = rest.exchange(
+                "/auth/register/admin",
+                HttpMethod.POST,
+                new HttpEntity<>(newAdminBody, authHeaders(regularToken)),
+                Map.class);
+        assertThat(asRegular.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+
+        String adminToken = mintTokenFor(UserType.ADMIN);
+        ResponseEntity<Map> asAdmin = rest.exchange(
+                "/auth/register/admin",
+                HttpMethod.POST,
+                new HttpEntity<>(newAdminBody, authHeaders(adminToken)),
+                Map.class);
+        assertThat(asAdmin.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat(asAdmin.getBody().get("userType")).isEqualTo("admin");
+    }
+
+    @Test
     void updatingOwnProfileIsReflectedImmediately() {
         Map<String, String> registerBody = Map.of(
                 "email", "update@example.com",
                 "firstName", "Before",
                 "lastName", "Update",
-                "password", "password123");
+                "password", "Password123!");
         ResponseEntity<Map> registerResponse = rest.postForEntity("/auth/register", registerBody, Map.class);
         String userId = (String) registerResponse.getBody().get("id");
         String token = loginAs("update@example.com");
@@ -132,14 +199,14 @@ class AuthFlowIntegrationTest extends IntegrationTestSupport {
     private String registerAndLogin(String email) {
         rest.postForEntity(
                 "/auth/register",
-                Map.of("email", email, "firstName", "First", "lastName", "Last", "password", "password123"),
+                Map.of("email", email, "firstName", "First", "lastName", "Last", "password", "Password123!"),
                 Map.class);
         return loginAs(email);
     }
 
     private String loginAs(String email) {
         ResponseEntity<Map> loginResponse =
-                rest.postForEntity("/auth/login", Map.of("email", email, "password", "password123"), Map.class);
+                rest.postForEntity("/auth/login", Map.of("email", email, "password", "Password123!"), Map.class);
         return (String) loginResponse.getBody().get("accessToken");
     }
 

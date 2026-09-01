@@ -53,6 +53,19 @@ class UserServiceTest {
     }
 
     @Test
+    void registerAdminCreatesAnAdminUser() {
+        when(userCacheService.getByEmail(anyString())).thenReturn(Optional.empty());
+        when(userRepository.existsByEmail(anyString())).thenReturn(false);
+        when(passwordEncoder.encode(anyString())).thenReturn("hashed");
+
+        User admin = userService.registerAdmin(new RegisterRequest("root@example.com", "Root", "Admin", "hunter22"));
+
+        assertThat(admin.getUserType()).isEqualTo(UserType.ADMIN);
+        verify(userCacheService).put(admin);
+        verify(authEventPublisher).publish(any(UserRegistered.class));
+    }
+
+    @Test
     void registerRejectsAnEmailAlreadyCachedInRedis() {
         when(userCacheService.getByEmail("jane@example.com"))
                 .thenReturn(Optional.of(mock(User.class)));
