@@ -1,0 +1,12 @@
+// Placeholder module. Full domain (genres, movies, showrooms, showtimes,
+// reservations, payments, admin reporting) is planned as a follow-up once
+// auth-api is complete — see /Users/oscaroguledo/.claude/plans/humble-stirring-crown.md
+plugins {
+    id 'org.springframework.boot'
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}

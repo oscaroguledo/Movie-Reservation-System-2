@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: auth-api
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:auth_api}
+    username: ${DB_USER:auth_api}
+    password: ${DB_PASSWORD:auth_api}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only validates it matches the
+      # entity mappings at startup, mirroring the Python side's
+      # "no runtime schema creation" rule (Alembic-only there).
+      ddl-auto: validate
+
+  flyway:
+    schemas: auth_api
+    default-schema: auth_api
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: auth-api-worker
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: auth.event
+
+server:
+  port: 8080
+
+auth:
+  jwt:
+    # Must be overridden in any non-local environment.
+    secret: ${JWT_SECRET_KEY:dev-only-insecure-secret-change-me-32-bytes-min}
+    access-token-ttl-minutes: ${JWT_ACCESS_TOKEN_TTL_MINUTES:30}
+  rate-limit:
+    max-requests: ${AUTH_RATE_LIMIT_MAX_REQUESTS:20}
+    window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}

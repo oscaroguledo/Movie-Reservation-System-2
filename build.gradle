@@ -1,28 +1,30 @@
+// Shared configuration for all modules (auth-api, movie-api). Each module
+// applies the Spring Boot plugin itself and declares its own dependencies.
 plugins {
-    id 'java'
-    id 'org.springframework.boot' version '3.2.3'
-    id 'io.spring.dependency-management' version '1.1.4'
+    id 'org.springframework.boot' version '3.2.3' apply false
+    id 'io.spring.dependency-management' version '1.1.4' apply false
 }
 
-group = 'auth'
-version = '0.0.1-SNAPSHOT'
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
+allprojects {
+    group = 'auth'
+    version = '0.0.1-SNAPSHOT'
+
+    repositories {
+        mavenCentral()
     }
 }
 
-repositories {
-    mavenCentral()
-}
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'io.spring.dependency-management'
 
-dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-actuator'
-    
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-}
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
 
-tasks.named('test') {
-    useJUnitPlatform()
+    tasks.named('test') {
+        useJUnitPlatform()
+    }
 }

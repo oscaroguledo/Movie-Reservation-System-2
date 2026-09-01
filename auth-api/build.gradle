@@ -1,0 +1,55 @@
+plugins {
+    id 'org.springframework.boot'
+}
+
+// Spring Boot 3.2.3 manages an older Testcontainers/docker-java version
+// whose Docker API pinning is rejected (HTTP 400) by newer Docker Desktop
+// daemons (MinAPIVersion 1.44+). Override to a release with an auto-
+// negotiating client.
+ext['testcontainers.version'] = '1.20.4'
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.postgresql:postgresql'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // Argon2id password hashing (matches the Python side's Argon2id).
+    implementation 'org.springframework.security:spring-security-crypto'
+    runtimeOnly 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+
+    // JWT issuance/validation.
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation 'org.awaitility:awaitility'
+    // TestRestTemplate's default JDK HttpURLConnection-based client
+    // rejects the PATCH verb outright; Spring Boot auto-switches to
+    // Apache HttpClient (which supports it) once this is on the classpath.
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5'
+}
+
+// Forward DOCKER_API_VERSION (if set) to the forked test JVM as the
+// docker-java 'api.version' system property, since Gradle test workers
+// don't apply -D flags passed on the gradlew command line. Needed on
+// hosts whose Docker daemon rejects docker-java's default API version.
+tasks.named('test') {
+    def apiVersionOverride = System.getenv('DOCKER_API_VERSION')
+    if (apiVersionOverride) {
+        systemProperty 'api.version', apiVersionOverride
+    }
+}
