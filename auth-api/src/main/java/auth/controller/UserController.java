@@ -1,23 +1,28 @@
 package auth.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import auth.dto.UpdateUserRequest;
 import auth.dto.UserResponse;
+import auth.model.UserType;
+import auth.security.AuthPrincipal;
 import auth.service.UserService;
 import jakarta.validation.Valid;
 
-/** Every operation is self-or-admin: an ADMIN may act on any user, a REGULAR user only on themselves. */
+/** Every self-or-admin operation: an ADMIN may act on any user, a REGULAR user only on themselves. */
 @RestController
 @RequestMapping("/users")
 public class UserController {
@@ -30,10 +35,41 @@ public class UserController {
         this.userService = userService;
     }
 
+    /** The caller's own profile — no id needed, since the caller already knows who they are. */
+    @GetMapping("/me")
+    public UserResponse me() {
+        var principal = (AuthPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        return UserResponse.from(userService.getById(principal.userId()));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize(SELF_OR_ADMIN)
     public UserResponse get(@PathVariable UUID id) {
         return UserResponse.from(userService.getById(id));
+    }
+
+    /**
+     * Admin-only listing. Simplifies the Python reference's rule (a
+     * non-admin may also list, but only filtered to type=regular) —
+     * that reads as defense-in-depth against building a general
+     * directory, not a capability worth the extra complexity here.
+     */
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<UserResponse> list(
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String firstName,
+            @RequestParam(required = false) String lastName,
+            @RequestParam(defaultValue = "100") int limit,
+            @RequestParam(defaultValue = "0") int offset) {
+        // Bound as a plain String, not UserType: Spring MVC's default
+        // enum conversion matches the constant name ("ADMIN"), but every
+        // other part of this API's wire format uses UserType.getValue()
+        // ("admin") — fromValue() is the one that actually matches that.
+        UserType userType = type != null ? UserType.fromValue(type) : null;
+        return userService.list(userType, firstName, lastName, limit, offset).stream()
+                .map(UserResponse::from)
+                .toList();
     }
 
     @PatchMapping("/{id}")

@@ -2,6 +2,7 @@ package auth.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -38,6 +39,21 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         User user = userService.register(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(user));
+    }
+
+    /**
+     * Admin-only: create another admin account. Unlike {@link #register},
+     * there is deliberately no client-controlled "type" field anywhere in
+     * {@link RegisterRequest} — the Python reference's plain /register
+     * endpoint accepts a client-supplied type and never overrides it,
+     * which lets anyone self-register as admin. This endpoint is the only
+     * way to grant admin here, and only an existing admin can call it.
+     */
+    @PostMapping("/register/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> registerAdmin(@Valid @RequestBody RegisterRequest request) {
+        User user = userService.registerAdmin(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(user));
     }
 
