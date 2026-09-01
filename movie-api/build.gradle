@@ -1,12 +1,45 @@
-// Placeholder module. Full domain (genres, movies, showrooms, showtimes,
-// reservations, payments, admin reporting) is planned as a follow-up once
-// auth-api is complete — see /Users/oscaroguledo/.claude/plans/humble-stirring-crown.md
 plugins {
     id 'org.springframework.boot'
 }
 
+// Same Testcontainers/docker-java override as auth-api — see that
+// module's build.gradle for the full explanation (Spring Boot 3.2.3's
+// managed version is rejected by newer Docker Desktop daemons).
+ext['testcontainers.version'] = '1.20.4'
+
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.flywaydb:flyway-core'
+    runtimeOnly 'org.postgresql:postgresql'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // JWT parsing only — movie-api never issues tokens, just validates
+    // ones auth-api already issued (same shared secret).
+    implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+
+    implementation 'org.springframework.kafka:spring-kafka'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'org.testcontainers:junit-jupiter'
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:kafka'
+    testImplementation 'org.awaitility:awaitility'
+    testImplementation 'org.apache.httpcomponents.client5:httpclient5'
+}
+
+// See auth-api/build.gradle for why this exists.
+tasks.named('test') {
+    def apiVersionOverride = System.getenv('DOCKER_API_VERSION')
+    if (apiVersionOverride) {
+        systemProperty 'api.version', apiVersionOverride
+    }
 }

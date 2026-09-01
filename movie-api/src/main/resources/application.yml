@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: movie-api
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:movie_api}
+    username: ${DB_USER:movie_api}
+    password: ${DB_PASSWORD:movie_api}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Flyway owns the schema; Hibernate only validates it matches the
+      # entity mappings at startup — same rule as auth-api.
+      ddl-auto: validate
+
+  flyway:
+    schemas: movie_api
+    default-schema: movie_api
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+    consumer:
+      group-id: movie-api-worker
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: movie.event
+
+server:
+  port: 8081
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+movie:
+  # Same secret as auth-api — movie-api validates the JWTs auth-api
+  # issues, it doesn't issue its own.
+  jwt:
+    secret: ${JWT_SECRET_KEY:dev-only-insecure-secret-change-me-32-bytes-min}
+  reservation:
+    hold-ttl-seconds: ${HOLD_TTL_SECONDS:30}
+    entity-cache-ttl-seconds: ${ENTITY_CACHE_TTL_SECONDS:3600}
+    rate-limit:
+      max-requests: ${RESERVATION_RATE_LIMIT_MAX_REQUESTS:20}
+      window-seconds: ${RESERVATION_RATE_LIMIT_WINDOW_SECONDS:60}
