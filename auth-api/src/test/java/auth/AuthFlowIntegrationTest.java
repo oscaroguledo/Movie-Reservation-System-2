@@ -1,7 +1,9 @@
 package auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -147,6 +149,49 @@ class AuthFlowIntegrationTest extends IntegrationTestSupport {
                 "/users?limit=5", HttpMethod.GET, new HttpEntity<>(authHeaders(adminToken)), List.class);
         assertThat(asAdmin.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(asAdmin.getBody()).isNotNull();
+    }
+
+    /**
+     * Regression test: Spring MVC's default enum binding for
+     * {@code @RequestParam} matches the constant name ("ADMIN"), but
+     * this API's wire format is always {@code UserType.getValue()}
+     * ("admin") — the controller has to convert the query param via
+     * {@code UserType.fromValue} itself rather than binding it as
+     * {@code UserType} directly, or every {@code ?type=admin} 400s.
+     */
+    @Test
+    void listingUsersFiltersByTypeQueryParam() {
+        String tag = "listtype" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        rest.postForEntity(
+                "/auth/register",
+                Map.of("email", tag + "@example.com", "firstName", tag, "lastName", "User", "password",
+                        "Password123!"),
+                Map.class);
+
+        String adminToken = mintTokenFor(UserType.ADMIN);
+        String listUrl = "/users?type=regular&firstName=" + tag;
+
+        // GET /users reads Postgres directly (not the Redis cache-aside
+        // layer), so it only sees the user once the Kafka worker has
+        // actually persisted the async register event.
+        await().atMost(Duration.ofSeconds(10)).untilAsserted(() -> {
+            ResponseEntity<List> results = rest.exchange(
+                    listUrl, HttpMethod.GET, new HttpEntity<>(authHeaders(adminToken)), List.class);
+            assertThat(results.getStatusCode()).isEqualTo(HttpStatus.OK);
+            assertThat(results.getBody()).hasSize(1);
+        });
+
+        ResponseEntity<List> adminResults = rest.exchange(
+                "/users?type=admin&firstName=" + tag,
+                HttpMethod.GET,
+                new HttpEntity<>(authHeaders(adminToken)),
+                List.class);
+        assertThat(adminResults.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(adminResults.getBody()).isEmpty();
+
+        ResponseEntity<Map> invalidType = rest.exchange(
+                "/users?type=bogus", HttpMethod.GET, new HttpEntity<>(authHeaders(adminToken)), Map.class);
+        assertThat(invalidType.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test

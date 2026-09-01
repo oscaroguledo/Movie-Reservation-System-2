@@ -57,12 +57,17 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> list(
-            @RequestParam(required = false) UserType type,
+            @RequestParam(required = false) String type,
             @RequestParam(required = false) String firstName,
             @RequestParam(required = false) String lastName,
             @RequestParam(defaultValue = "100") int limit,
             @RequestParam(defaultValue = "0") int offset) {
-        return userService.list(type, firstName, lastName, limit, offset).stream()
+        // Bound as a plain String, not UserType: Spring MVC's default
+        // enum conversion matches the constant name ("ADMIN"), but every
+        // other part of this API's wire format uses UserType.getValue()
+        // ("admin") — fromValue() is the one that actually matches that.
+        UserType userType = type != null ? UserType.fromValue(type) : null;
+        return userService.list(userType, firstName, lastName, limit, offset).stream()
                 .map(UserResponse::from)
                 .toList();
     }

@@ -34,4 +34,10 @@ public class GlobalExceptionHandler {
                 .orElse("Invalid request");
         return ResponseEntity.badRequest().body(Map.of("error", message));
     }
+
+    /** e.g. an unrecognized ?type= value on GET /users (UserType.fromValue). */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    }
 }
