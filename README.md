@@ -89,6 +89,16 @@ an immediate read-your-writes response, and publish onto the
 `auth-events` Kafka topic; `AuthEventWorker` consumes those events and is
 the sole writer to Postgres, per the pipeline above.
 
+Two supporting pieces round it out: `InitialAdminSeeder` bootstraps the
+very first admin from `INITIAL_ADMIN_EMAIL`/`INITIAL_ADMIN_PASSWORD` on
+startup, if one doesn't already exist — otherwise there's no way to reach
+an admin-gated endpoint at all on a fresh system, since even
+`POST /auth/register/admin` requires one to already exist. And
+`RevokedTokenCleanupTask` runs on a fixed delay
+(`REVOKED_TOKEN_CLEANUP_INTERVAL_SECONDS`, default 1 hour), deleting
+`revoked_tokens` rows whose own token has already expired — harmless to
+keep, but they'd otherwise grow forever.
+
 ### movie-api
 
 <img src="docs/diagrams/movie-system-design.svg" alt="movie-api system design" width="900">
@@ -228,6 +238,10 @@ the same machine without a clash. Both services share one Postgres
 database, with `auth_api`/`movie_api` as separate schemas within it —
 matching the Python reference's own shape rather than provisioning two
 databases.
+
+Set `INITIAL_ADMIN_EMAIL` / `INITIAL_ADMIN_PASSWORD` in `.env` to have
+`auth-api` bootstrap the first admin account on startup — every
+admin-management endpoint otherwise requires one to already exist.
 
 ### Local development (no Docker for the app itself)
 

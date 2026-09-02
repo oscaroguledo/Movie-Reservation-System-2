@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -84,5 +85,16 @@ class TokenServiceTest {
         // Postgres is no longer written to synchronously — that's the
         // worker's job once it consumes the published event.
         verify(revokedTokenRepository, never()).save(any());
+    }
+
+    @Test
+    void purgeExpiredDelegatesToTheRepositoryAndReturnsHowManyWereDeleted() {
+        OffsetDateTime now = OffsetDateTime.now();
+        when(revokedTokenRepository.deleteByExpiresAtBefore(now)).thenReturn(3L);
+
+        long deleted = tokenService.purgeExpired(now);
+
+        assertThat(deleted).isEqualTo(3L);
+        verify(revokedTokenRepository).deleteByExpiresAtBefore(now);
     }
 }

@@ -59,3 +59,15 @@ auth:
   rate-limit:
     max-requests: ${AUTH_RATE_LIMIT_MAX_REQUESTS:20}
     window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+  # InitialAdminSeeder bootstraps this account on startup when both email
+  # and password are set — the only way to get a first admin, since every
+  # admin-management endpoint otherwise requires one to already exist.
+  # Leave blank (the default) to skip seeding.
+  initial-admin:
+    email: ${INITIAL_ADMIN_EMAIL:}
+    password: ${INITIAL_ADMIN_PASSWORD:}
+    first-name: ${INITIAL_ADMIN_FIRST_NAME:Admin}
+    last-name: ${INITIAL_ADMIN_LAST_NAME:User}
+  # RevokedTokenCleanupTask's fixed-delay purge interval.
+  revoked-token-cleanup:
+    interval-seconds: ${REVOKED_TOKEN_CLEANUP_INTERVAL_SECONDS:3600}

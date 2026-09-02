@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import auth.cache.RevokedTokenCacheService;
 import auth.event.AuthEventPublisher;
@@ -64,5 +65,17 @@ public class TokenService {
     public void revoke(String jti, Instant expiresAt) {
         revokedTokenCacheService.markRevoked(jti, expiresAt);
         authEventPublisher.publish(new TokenRevoked(jti, OffsetDateTime.ofInstant(expiresAt, ZoneOffset.UTC)));
+    }
+
+    /**
+     * Deletes {@code revoked_tokens} rows whose own token has already
+     * expired — a revoked token past its {@code exp} is rejected on that
+     * basis alone regardless, so the row is harmless to keep but would
+     * otherwise grow the table forever. Called periodically by {@link
+     * RevokedTokenCleanupTask}.
+     */
+    @Transactional
+    public long purgeExpired(OffsetDateTime now) {
+        return revokedTokenRepository.deleteByExpiresAtBefore(now);
     }
 }
