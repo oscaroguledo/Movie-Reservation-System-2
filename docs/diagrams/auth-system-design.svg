@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 800" width="1400" height="800">
+<title>auth-api system design</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+<marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+<marker id="arrow-dash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8891a0"/></marker></defs>
+<rect x="1" y="1" width="1398" height="798" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+<rect x="40" y="220" width="220" height="110" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4"/>
+<text x="150.0" y="250" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Client</text>
+<text x="150.0" y="270.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">register, login</text>
+<rect x="340" y="60" width="380" height="300" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4"/>
+<text x="530.0" y="90" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="19" font-weight="700" fill="#0f172a">auth-api</text>
+<text x="530.0" y="110.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">JwtProvider (HS384) +</text>
+<text x="530.0" y="127.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">Argon2PasswordEncoder</text>
+<text x="530.0" y="144.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563"></text>
+<text x="530.0" y="161.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">validate credentials,</text>
+<text x="530.0" y="178.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">hash / verify password</text>
+<text x="530.0" y="195.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563"></text>
+<text x="530.0" y="212.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">publishes UserRegistered /</text>
+<text x="530.0" y="229.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">UserUpdated / UserDeleted /</text>
+<text x="530.0" y="246.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">TokenRevoked</text>
+<rect x="820" y="40" width="340" height="90" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4"/>
+<text x="990.0" y="70" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Response</text>
+<text x="990.0" y="90.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">UserResponse — register</text>
+<rect x="820" y="160" width="340" height="90" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4"/>
+<text x="990.0" y="190" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Response</text>
+<text x="990.0" y="210.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">AccessTokenResponse — login</text>
+<rect x="340" y="420" width="380" height="180" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4"/>
+<text x="530.0" y="450" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Redis</text>
+<text x="530.0" y="470.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">UserCacheService /</text>
+<text x="530.0" y="487.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">RevokedTokenCacheService</text>
+<text x="530.0" y="504.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">cache-aside, TTL 30 min</text>
+<text x="530.0" y="521.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">read-your-writes before</text>
+<text x="530.0" y="538.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">Postgres ever sees it</text>
+<rect x="820" y="330" width="340" height="100" rx="12" fill="#ffffff" stroke="#0f766e" stroke-width="2.2"/>
+<text x="990.0" y="360" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Kafka</text>
+<text x="990.0" y="380.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">topic: auth-events</text>
+<rect x="820" y="470" width="340" height="130" rx="12" fill="#ffffff" stroke="#0f766e" stroke-width="2.2"/>
+<text x="990.0" y="500" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">AuthEventWorker</text>
+<text x="990.0" y="520.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">in-process @KafkaListener —</text>
+<text x="990.0" y="537.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">same JVM as auth-api,</text>
+<text x="990.0" y="554.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">not a separate deployable</text>
+<rect x="340" y="680" width="820" height="100" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4"/>
+<text x="750.0" y="710" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Postgres</text>
+<text x="750.0" y="730.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">auth_api schema: users, revoked_tokens  ·  sole writer: AuthEventWorker</text>
+<path d="M260,275.0 L340,135.0" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="238.5" y="183.0" width="122.99999999999999" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="300.0" y="197.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">register, login</text>
+<path d="M720,120.0 L820,85.0" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="737.2" y="80.5" width="65.6" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="770.0" y="94.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">register</text>
+<path d="M720,195.0 L820,205.0" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="749.5" y="178.0" width="41.0" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="770.0" y="192.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">login</text>
+<path d="M454.0,360 L454.0,420" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="408.9" y="368.0" width="90.19999999999999" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="454.0" y="382.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">cache-aside</text>
+<path d="M720,285.0 L820,380.0" fill="none" stroke="#0f766e" stroke-width="2.2" marker-end="url(#arrow-teal)"/>
+<rect x="741.3" y="310.5" width="57.39999999999999" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="770.0" y="324.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#0f766e">publish</text>
+<path d="M990.0,430 L990.0,470" fill="none" stroke="#0f766e" stroke-width="2.2" marker-end="url(#arrow-teal)"/>
+<rect x="961.3" y="428.0" width="57.39999999999999" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="990.0" y="442.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#0f766e">consume</text>
+<path d="M990.0,600 L1012.4,680" fill="none" stroke="#0f766e" stroke-width="2.2" marker-end="url(#arrow-teal)"/>
+<rect x="915.1" y="618.0" width="172.2" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="1001.2" y="632.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#0f766e">persist (sole writer)</text>
+<path d="M530.0,600 L487.6,680" fill="none" stroke="#8891a0" stroke-width="2.2" stroke-dasharray="6,5" marker-end="url(#arrow-dash)"/>
+<rect x="418.6" y="618.0" width="180.39999999999998" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="508.8" y="632.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#8891a0">fallback on cache miss</text>
+</svg>

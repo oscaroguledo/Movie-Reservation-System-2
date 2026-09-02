@@ -70,16 +70,18 @@ group — without touching any event-handling code.
 
 ### auth-api
 
-<img src="docs/diagrams/auth-system-design.png" alt="auth-api system design" width="800">
+<img src="docs/diagrams/auth-system-design.svg" alt="auth-api system design" width="900">
 
 `auth-api` owns accounts and JWT issuance. `register`/`login` validate
-and hash/verify credentials, write through to Postgres via the pipeline
-above, and publish onto the `users` Kafka topic for downstream consumers
-(notifications, audit logging, etc. in the original design).
+credentials and hash/verify passwords with Argon2id, cache-aside through
+Redis (`UserCacheService` / `RevokedTokenCacheService`, 30-minute TTL) for
+an immediate read-your-writes response, and publish onto the
+`auth-events` Kafka topic; `AuthEventWorker` consumes those events and is
+the sole writer to Postgres, per the pipeline above.
 
 ### movie-api
 
-<img src="docs/diagrams/movie-system-design.png" alt="movie-api system design" width="800">
+<img src="docs/diagrams/movie-system-design.svg" alt="movie-api system design" width="900">
 
 `movie-api` verifies the JWTs `auth-api` issues (same shared secret, no
 network call back to `auth-api`) and owns the catalog, screenings,
@@ -114,7 +116,7 @@ call returns `402`; cancelling a `CONFIRMED` reservation auto-refunds.
 
 ### Reservation lifecycle
 
-<img src="docs/diagrams/reservation-lifecycle.png" alt="Reservation lifecycle" width="800">
+<img src="docs/diagrams/reservation-lifecycle.svg" alt="Reservation lifecycle" width="900">
 
 ## Tech stack
 
