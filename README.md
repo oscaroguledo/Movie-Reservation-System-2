@@ -2,13 +2,16 @@
 
 [![CI](https://github.com/oscaroguledo/Movie-Reservation-System-2/actions/workflows/ci.yml/badge.svg)](https://github.com/oscaroguledo/Movie-Reservation-System-2/actions/workflows/ci.yml)
 
-A Java / Spring Boot backend for a movie reservation service, ported 1:1
-from the Python/FastAPI reference implementation at
+A Java / Spring Boot backend for a movie reservation service: two
+services (`auth-api`, `movie-api`) sharing a cache-aside +
+event-sourcing write pipeline over Postgres, Redis, and Kafka, built for
+**architectural fidelity rather than a simplified toy design** — the
+same two-service topology, the same eventually-consistent write
+pipeline, and the same Redis-as-concurrency-guard patterns implemented
+idiomatically in Java throughout.
+
+A Python/FastAPI implementation of this same system is available at
 [oscaroguledo/Movie-Reservation-System](https://github.com/oscaroguledo/Movie-Reservation-System).
-The goal of the port is **architectural parity, not a simplified
-rewrite** — the same two-service topology, the same eventually-consistent
-write pipeline, and the same Redis-as-concurrency-guard patterns as the
-original, re-expressed idiomatically in Java.
 
 ## Table of contents
 
