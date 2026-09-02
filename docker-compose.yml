@@ -1,15 +1,21 @@
-# Local dev stack for auth-api. movie-api is still a placeholder module
-# (see the port plan) so it isn't wired in here yet.
+# Local dev stack for auth-api + movie-api.
 #
-# auth-api's Kafka worker (AuthEventWorker) runs in-process rather than as
-# a separate service — unlike the Python reference's standalone worker.py,
-# it's just a @KafkaListener component in the same Spring app (see the
-# Kafka-pipeline commit). Splitting it into its own container later would
-# mean adding a "worker-only" Spring profile that disables the web server,
-# without touching any event-handling code.
+# Both services share one Postgres database (matching the Python
+# reference's own shape — a single "movie_reservation"-style database
+# with auth_api/movie_api namespaced as separate schemas within it, not
+# two separate databases). Each service's Flyway migration only ever
+# touches its own schema (spring.flyway.schemas), so the two stay
+# cleanly separated despite sharing one connection target.
 #
-# Flyway migrates the schema on application startup (Spring Boot's default
-# behavior), so there's no separate one-shot migration container either.
+# Each service's Kafka worker (AuthEventWorker / MovieEventWorker) runs
+# in-process rather than as a separate container — unlike the Python
+# reference's standalone worker.py, it's just a @KafkaListener component
+# in the same Spring app. Splitting either into its own container later
+# would mean adding a "worker-only" Spring profile that disables the web
+# server, without touching any event-handling code.
+#
+# Flyway migrates each schema on application startup (Spring Boot's
+# default behavior), so there's no separate one-shot migration container.
 
 services:
   postgres:
@@ -93,6 +99,44 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  movie-api:
+    build:
+      context: .
+      dockerfile: movie-api/Dockerfile
+    ports:
+      # Host port 8011, not 8001: avoids clashing with the Python
+      # reference implementation's movie-api if both stacks run at once.
+      - "8011:8081"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      # Same physical database as auth-api — see the file header comment.
+      DB_NAME: ${POSTGRES_DB:-auth_api}
+      DB_USER: ${POSTGRES_USER:-auth_api}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Same secret as auth-api — movie-api validates the JWTs auth-api
+      # issues, it doesn't issue its own.
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set — copy .env.example to .env}
+      HOLD_TTL_SECONDS: ${HOLD_TTL_SECONDS:-30}
+      ENTITY_CACHE_TTL_SECONDS: ${ENTITY_CACHE_TTL_SECONDS:-3600}
+      RESERVATION_RATE_LIMIT_MAX_REQUESTS: ${RESERVATION_RATE_LIMIT_MAX_REQUESTS:-20}
+      RESERVATION_RATE_LIMIT_WINDOW_SECONDS: ${RESERVATION_RATE_LIMIT_WINDOW_SECONDS:-60}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/health || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10

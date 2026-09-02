@@ -21,6 +21,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
     }
 
+    @ExceptionHandler(NotAuthorizedException.class)
+    public ResponseEntity<Map<String, String>> handleNotAuthorized(NotAuthorizedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(NotAuthenticatedException.class)
+    public ResponseEntity<Map<String, String>> handleNotAuthenticated(NotAuthenticatedException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", e.getMessage()));
+    }
+
+    @ExceptionHandler(PaymentFailedException.class)
+    public ResponseEntity<Map<String, String>> handlePaymentFailed(PaymentFailedException e) {
+        return ResponseEntity.status(HttpStatus.PAYMENT_REQUIRED).body(Map.of("error", e.getMessage()));
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException e) {
         String message = e.getBindingResult().getFieldErrors().stream()
