@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1560 900" width="1560" height="900">
+<title>reservation lifecycle</title>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#475569"/></marker>
+<marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker>
+<marker id="arrow-dash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8891a0"/></marker></defs>
+<rect x="1" y="1" width="1558" height="898" rx="18" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5"/>
+<rect x="600" y="30" width="400" height="90" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4"/>
+<text x="800.0" y="60" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Client request</text>
+<text x="800.0" y="80.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">POST /reservations</text>
+<text x="800.0" y="97.5" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" fill="#4b5563">{movieId, showroomId, showtimeId, showroomSeatIds}</text>
+<rect x="560" y="170" width="480" height="160" rx="12" fill="#ffffff" stroke="#0f766e" stroke-width="2.2"/>
+<text x="800.0" y="200" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Acquire seat locks</text>
+<text x="800.0" y="220.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">per seat: SeatLockService.acquireSeat</text>
+<text x="800.0" y="236.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">Redis SETNX, TTL = hold-ttl-seconds</text>
+<text x="800.0" y="253.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">  -&gt; the overbooking guard, no Postgres check here</text>
+<text x="800.0" y="269.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">rate-limited per client IP</text>
+<text x="800.0" y="286.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">(reservation.rate-limit.max-requests / window-seconds)</text>
+<rect x="60" y="400" width="420" height="130" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4" stroke-dasharray="7,5"/>
+<text x="270.0" y="430" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">409 Conflict</text>
+<text x="270.0" y="450.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">EntityConflictException:</text>
+<text x="270.0" y="466.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">"One or more selected seats are no longer available"</text>
+<text x="270.0" y="483.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">already-acquired seats in this request are released</text>
+<rect x="560" y="400" width="480" height="190" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4"/>
+<text x="800.0" y="430" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">PENDING</text>
+<text x="800.0" y="450.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">hold cached in Redis (no TTL on the</text>
+<text x="800.0" y="466.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">reservation record itself)</text>
+<text x="800.0" y="483.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">expiresAt = now() + hold-ttl-seconds</text>
+<text x="800.0" y="499.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">ReservationCreated published -&gt;</text>
+<text x="800.0" y="516.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">MovieEventWorker persists to Postgres</text>
+<rect x="60" y="660" width="420" height="150" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4" stroke-dasharray="7,5"/>
+<text x="270.0" y="690" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">EXPIRED</text>
+<text x="270.0" y="710.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">settled lazily on next read</text>
+<text x="270.0" y="726.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">(get / confirm / cancel) — no</text>
+<text x="270.0" y="743.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">background sweep</text>
+<text x="270.0" y="759.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">seat lock released</text>
+<text x="270.0" y="776.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">(Redis key deleted)</text>
+<rect x="560" y="660" width="480" height="190" rx="12" fill="#ffffff" stroke="#0f766e" stroke-width="2.2"/>
+<text x="800.0" y="690" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">CONFIRMED</text>
+<text x="800.0" y="710.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">POST /{id}/confirm — owner, guest</text>
+<text x="800.0" y="726.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">hold, or admin</text>
+<text x="800.0" y="743.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">amount must exactly match the</text>
+<text x="800.0" y="759.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">screening price, else 402 (stays PENDING)</text>
+<text x="800.0" y="776.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">seat lock TTL removed (persistSeat);</text>
+<text x="800.0" y="792.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">ReservationConfirmed published</text>
+<rect x="1140" y="400" width="380" height="190" rx="12" fill="#eef1f5" stroke="#c7cfd6" stroke-width="1.4" stroke-dasharray="7,5"/>
+<text x="1330.0" y="430" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">CANCELLED</text>
+<text x="1330.0" y="450.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">PATCH /{id}/cancel — owner,</text>
+<text x="1330.0" y="466.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">guest hold, or admin</text>
+<text x="1330.0" y="483.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">refused once the screening</text>
+<text x="1330.0" y="499.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">has started</text>
+<text x="1330.0" y="516.2" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">seat lock released; refund</text>
+<text x="1330.0" y="532.7" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.2" fill="#4b5563">issued if it was CONFIRMED</text>
+<path d="M800.0,120 L800.0,170" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<path d="M560,282.0 L560,400 L354.0,400" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="465.7" y="319.0" width="188.6" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="560" y="333.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">SETNX fails on any seat</text>
+<path d="M800.0,330 L800.0,400" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="726.2" y="343.0" width="147.6" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="800.0" y="357.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">all seats acquired</text>
+<path d="M560,542.5 L560,660 L375.0,660" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="494.4" y="579.25" width="131.2" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="560" y="593.25" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">expiresAt passed</text>
+<path d="M800.0,590 L800.0,660" fill="none" stroke="#0f766e" stroke-width="2.2" marker-end="url(#arrow-teal)"/>
+<rect x="734.4" y="603.0" width="131.2" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="800.0" y="617.0" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#0f766e">payment succeeds</text>
+<path d="M1040,411.4 L1140,411.4 L1140,434.2" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="1012.1" y="389.4" width="155.79999999999998" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="1090.0" y="403.4" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">cancel from PENDING</text>
+<path d="M1040,774.0 L1140,774.0 L1140,552.0" fill="none" stroke="#475569" stroke-width="2.2" marker-end="url(#arrow)"/>
+<rect x="943.9" y="618" width="172.2" height="17" fill="#ffffff" opacity="0.9"/>
+<text x="1030" y="632" text-anchor="middle" font-family="SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace" font-size="12.5" font-weight="600" fill="#475569">cancel — auto-refunds</text>
+</svg>
