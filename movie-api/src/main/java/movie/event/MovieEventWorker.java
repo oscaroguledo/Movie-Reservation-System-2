@@ -13,12 +13,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import movie.model.Genre;
 import movie.model.Movie;
+import movie.model.MovieShowtime;
 import movie.model.Showroom;
 import movie.model.ShowroomSeat;
+import movie.model.Showtime;
 import movie.repository.GenreRepository;
 import movie.repository.MovieRepository;
+import movie.repository.MovieShowtimeRepository;
 import movie.repository.ShowroomRepository;
 import movie.repository.ShowroomSeatRepository;
+import movie.repository.ShowtimeRepository;
 
 /**
  * Consumes {@link MovieEvent}s and persists them to Postgres — matches
@@ -40,16 +44,22 @@ public class MovieEventWorker {
     private final MovieRepository movieRepository;
     private final ShowroomRepository showroomRepository;
     private final ShowroomSeatRepository showroomSeatRepository;
+    private final ShowtimeRepository showtimeRepository;
+    private final MovieShowtimeRepository movieShowtimeRepository;
 
     public MovieEventWorker(
             GenreRepository genreRepository,
             MovieRepository movieRepository,
             ShowroomRepository showroomRepository,
-            ShowroomSeatRepository showroomSeatRepository) {
+            ShowroomSeatRepository showroomSeatRepository,
+            ShowtimeRepository showtimeRepository,
+            MovieShowtimeRepository movieShowtimeRepository) {
         this.genreRepository = genreRepository;
         this.movieRepository = movieRepository;
         this.showroomRepository = showroomRepository;
         this.showroomSeatRepository = showroomSeatRepository;
+        this.showtimeRepository = showtimeRepository;
+        this.movieShowtimeRepository = movieShowtimeRepository;
     }
 
     @KafkaListener(topics = MovieEventPublisher.TOPIC, groupId = "${spring.kafka.consumer.group-id}")
@@ -78,6 +88,8 @@ public class MovieEventWorker {
             case ShowroomUpdated e -> updateShowroom(e);
             case ShowroomDeleted e -> showroomRepository.deleteById(e.showroomId());
             case ShowroomSeatsCreated e -> createShowroomSeats(e);
+            case ScreeningScheduled e -> createScreening(e);
+            case ScreeningDeleted e -> deleteScreening(e);
         }
     }
 
@@ -160,5 +172,20 @@ public class MovieEventWorker {
         } catch (DataIntegrityViolationException ex) {
             // Redelivery of an already-applied write is expected and harmless.
         }
+    }
+
+    private void createScreening(ScreeningScheduled e) {
+        try {
+            showtimeRepository.save(new Showtime(e.showtimeId(), e.startTime(), e.endTime(), e.price()));
+            movieShowtimeRepository.save(new MovieShowtime(e.movieId(), e.showroomId(), e.showtimeId()));
+        } catch (DataIntegrityViolationException ex) {
+            // Redelivery of an already-applied write is expected and harmless.
+        }
+    }
+
+    private void deleteScreening(ScreeningDeleted e) {
+        movieShowtimeRepository.deleteByMovieIdAndShowroomIdAndShowtimeId(
+                e.movieId(), e.showroomId(), e.showtimeId());
+        showtimeRepository.deleteById(e.showtimeId());
     }
 }

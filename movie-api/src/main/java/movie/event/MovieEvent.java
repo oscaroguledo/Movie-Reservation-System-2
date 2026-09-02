@@ -8,7 +8,7 @@ package movie.event;
  */
 public sealed interface MovieEvent
         permits GenreCreated, GenreUpdated, GenreDeleted, MovieCreated, MovieUpdated, MovieDeleted, ShowroomCreated,
-                ShowroomUpdated, ShowroomDeleted, ShowroomSeatsCreated {
+                ShowroomUpdated, ShowroomDeleted, ShowroomSeatsCreated, ScreeningScheduled, ScreeningDeleted {
 
     /** Kafka partition key — keeps events for the same entity ordered. */
     String key();
