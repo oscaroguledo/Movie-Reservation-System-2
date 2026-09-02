@@ -1,5 +1,6 @@
 package movie.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -44,6 +45,10 @@ public class GenreService {
         entityCacheService.put(CACHE_PREFIX, genre.getId(), genre);
         eventPublisher.publish(new GenreCreated(genre.getId(), genre.getName()));
         return genre;
+    }
+
+    public List<Genre> list() {
+        return genreRepository.findAll();
     }
 
     public Genre getById(UUID id) {

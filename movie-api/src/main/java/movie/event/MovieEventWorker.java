@@ -1,5 +1,9 @@
 package movie.event;
 
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+
 import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -8,7 +12,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import movie.model.Genre;
+import movie.model.Movie;
+import movie.model.Showroom;
+import movie.model.ShowroomSeat;
 import movie.repository.GenreRepository;
+import movie.repository.MovieRepository;
+import movie.repository.ShowroomRepository;
+import movie.repository.ShowroomSeatRepository;
 
 /**
  * Consumes {@link MovieEvent}s and persists them to Postgres — matches
@@ -27,9 +37,19 @@ import movie.repository.GenreRepository;
 public class MovieEventWorker {
 
     private final GenreRepository genreRepository;
+    private final MovieRepository movieRepository;
+    private final ShowroomRepository showroomRepository;
+    private final ShowroomSeatRepository showroomSeatRepository;
 
-    public MovieEventWorker(GenreRepository genreRepository) {
+    public MovieEventWorker(
+            GenreRepository genreRepository,
+            MovieRepository movieRepository,
+            ShowroomRepository showroomRepository,
+            ShowroomSeatRepository showroomSeatRepository) {
         this.genreRepository = genreRepository;
+        this.movieRepository = movieRepository;
+        this.showroomRepository = showroomRepository;
+        this.showroomSeatRepository = showroomSeatRepository;
     }
 
     @KafkaListener(topics = MovieEventPublisher.TOPIC, groupId = "${spring.kafka.consumer.group-id}")
@@ -51,6 +71,13 @@ public class MovieEventWorker {
             case GenreCreated e -> createGenre(e);
             case GenreUpdated e -> updateGenre(e);
             case GenreDeleted e -> genreRepository.deleteById(e.genreId());
+            case MovieCreated e -> createMovie(e);
+            case MovieUpdated e -> updateMovie(e);
+            case MovieDeleted e -> movieRepository.deleteById(e.movieId());
+            case ShowroomCreated e -> createShowroom(e);
+            case ShowroomUpdated e -> updateShowroom(e);
+            case ShowroomDeleted e -> showroomRepository.deleteById(e.showroomId());
+            case ShowroomSeatsCreated e -> createShowroomSeats(e);
         }
     }
 
@@ -71,5 +98,67 @@ public class MovieEventWorker {
                             genreRepository.save(genre);
                         },
                         () -> genreRepository.save(new Genre(e.genreId(), e.name())));
+    }
+
+    private void createMovie(MovieCreated e) {
+        try {
+            Movie movie = new Movie(
+                    e.movieId(), e.title(), e.description(), e.posterImageUrl(), e.releaseDate(),
+                    e.durationMinutes());
+            movie.setGenres(resolveGenres(e.genreIds()));
+            movieRepository.save(movie);
+        } catch (DataIntegrityViolationException ex) {
+            // Redelivery of an already-applied write is expected and harmless.
+        }
+    }
+
+    private void updateMovie(MovieUpdated e) {
+        movieRepository
+                .findById(e.movieId())
+                .ifPresentOrElse(
+                        movie -> {
+                            movie.applyUpdate(
+                                    e.title(), e.description(), e.posterImageUrl(), e.releaseDate(),
+                                    e.durationMinutes());
+                            movie.setGenres(resolveGenres(e.genreIds()));
+                            movieRepository.save(movie);
+                        },
+                        () -> createMovie(new MovieCreated(
+                                e.movieId(), e.title(), e.description(), e.posterImageUrl(), e.releaseDate(),
+                                e.durationMinutes(), e.genreIds())));
+    }
+
+    private Set<Genre> resolveGenres(List<UUID> genreIds) {
+        return genreIds == null || genreIds.isEmpty() ? Set.of() : Set.copyOf(genreRepository.findAllById(genreIds));
+    }
+
+    private void createShowroom(ShowroomCreated e) {
+        try {
+            showroomRepository.save(new Showroom(e.showroomId(), e.name(), e.capacity()));
+        } catch (DataIntegrityViolationException ex) {
+            // Redelivery of an already-applied write is expected and harmless.
+        }
+    }
+
+    private void updateShowroom(ShowroomUpdated e) {
+        showroomRepository
+                .findById(e.showroomId())
+                .ifPresentOrElse(
+                        showroom -> {
+                            showroom.applyUpdate(e.name(), e.capacity());
+                            showroomRepository.save(showroom);
+                        },
+                        () -> showroomRepository.save(new Showroom(e.showroomId(), e.name(), e.capacity())));
+    }
+
+    private void createShowroomSeats(ShowroomSeatsCreated e) {
+        try {
+            for (ShowroomSeatsCreated.SeatData seat : e.seats()) {
+                showroomSeatRepository.save(
+                        new ShowroomSeat(seat.id(), e.showroomId(), seat.row(), seat.number()));
+            }
+        } catch (DataIntegrityViolationException ex) {
+            // Redelivery of an already-applied write is expected and harmless.
+        }
     }
 }
