@@ -20,6 +20,11 @@ same two-service topology, the same eventually-consistent write
 pipeline, and the same Redis-as-concurrency-guard patterns implemented
 idiomatically in Java throughout.
 
+Solution to the [Movie Reservation System](https://roadmap.sh/projects/movie-reservation-system)
+backend project on [roadmap.sh](https://roadmap.sh) — sign up/log in,
+browse movies and showtimes, reserve seats, manage reservations, plus
+admin movie/showtime management and reservation reporting.
+
 A Python/FastAPI implementation of this same system is available at
 [oscaroguledo/Movie-Reservation-System](https://github.com/oscaroguledo/Movie-Reservation-System).
 
@@ -217,6 +222,8 @@ movie-api/
 
 ### Docker Compose (recommended)
 
+Requires Docker Desktop (or an equivalent engine) and Docker Compose.
+
 ```bash
 cp .env.example .env
 # edit .env — at minimum set a real JWT_SECRET_KEY (32+ bytes)
@@ -245,14 +252,20 @@ admin-management endpoint otherwise requires one to already exist.
 
 ### Local development (no Docker for the app itself)
 
+Requires JDK 21 — the bundled `./gradlew` wrapper downloads the matching
+Gradle build itself, no separate Gradle install needed. Each module also
+needs its own Postgres/Redis/Kafka reachable (e.g. `docker compose up -d
+postgres redis kafka` from the compose file above, without the API
+services themselves).
+
 ```bash
 ./gradlew :auth-api:bootRun   # or :movie-api:bootRun
 ```
 
-Needs Postgres/Redis/Kafka reachable at the hosts/ports in each module's
-`application.yml` defaults (`localhost`), or override via environment
-variables (`DB_HOST`, `REDIS_HOST`, `KAFKA_BOOTSTRAP_SERVERS`, etc. — see
-each module's `application.yml` and `.env.example`).
+Reachable at the hosts/ports in each module's `application.yml`
+defaults (`localhost`), or override via environment variables
+(`DB_HOST`, `REDIS_HOST`, `KAFKA_BOOTSTRAP_SERVERS`, etc. — see each
+module's `application.yml` and `.env.example`).
 
 ## API reference
 
