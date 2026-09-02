@@ -9,6 +9,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import movie.ratelimit.RateLimitFilter;
 import movie.security.JwtPrincipalFilter;
 
 /**
@@ -27,13 +28,15 @@ import movie.security.JwtPrincipalFilter;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, JwtPrincipalFilter jwtPrincipalFilter)
+    public SecurityFilterChain filterChain(
+            HttpSecurity http, JwtPrincipalFilter jwtPrincipalFilter, RateLimitFilter rateLimitFilter)
             throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .anonymous(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
-                .addFilterBefore(jwtPrincipalFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtPrincipalFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, JwtPrincipalFilter.class);
         return http.build();
     }
 }

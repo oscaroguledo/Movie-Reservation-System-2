@@ -1,5 +1,6 @@
 package movie.event;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -14,12 +15,18 @@ import org.springframework.transaction.annotation.Transactional;
 import movie.model.Genre;
 import movie.model.Movie;
 import movie.model.MovieShowtime;
+import movie.model.Payment;
+import movie.model.Reservation;
+import movie.model.ReservationStatus;
+import movie.model.ReservationUserType;
 import movie.model.Showroom;
 import movie.model.ShowroomSeat;
 import movie.model.Showtime;
 import movie.repository.GenreRepository;
 import movie.repository.MovieRepository;
 import movie.repository.MovieShowtimeRepository;
+import movie.repository.PaymentRepository;
+import movie.repository.ReservationRepository;
 import movie.repository.ShowroomRepository;
 import movie.repository.ShowroomSeatRepository;
 import movie.repository.ShowtimeRepository;
@@ -46,6 +53,8 @@ public class MovieEventWorker {
     private final ShowroomSeatRepository showroomSeatRepository;
     private final ShowtimeRepository showtimeRepository;
     private final MovieShowtimeRepository movieShowtimeRepository;
+    private final ReservationRepository reservationRepository;
+    private final PaymentRepository paymentRepository;
 
     public MovieEventWorker(
             GenreRepository genreRepository,
@@ -53,13 +62,17 @@ public class MovieEventWorker {
             ShowroomRepository showroomRepository,
             ShowroomSeatRepository showroomSeatRepository,
             ShowtimeRepository showtimeRepository,
-            MovieShowtimeRepository movieShowtimeRepository) {
+            MovieShowtimeRepository movieShowtimeRepository,
+            ReservationRepository reservationRepository,
+            PaymentRepository paymentRepository) {
         this.genreRepository = genreRepository;
         this.movieRepository = movieRepository;
         this.showroomRepository = showroomRepository;
         this.showroomSeatRepository = showroomSeatRepository;
         this.showtimeRepository = showtimeRepository;
         this.movieShowtimeRepository = movieShowtimeRepository;
+        this.reservationRepository = reservationRepository;
+        this.paymentRepository = paymentRepository;
     }
 
     @KafkaListener(topics = MovieEventPublisher.TOPIC, groupId = "${spring.kafka.consumer.group-id}")
@@ -90,6 +103,17 @@ public class MovieEventWorker {
             case ShowroomSeatsCreated e -> createShowroomSeats(e);
             case ScreeningScheduled e -> createScreening(e);
             case ScreeningDeleted e -> deleteScreening(e);
+            case ReservationCreated e -> createReservation(e);
+            case ReservationConfirmed e -> applyReservationStatusChange(
+                    e.reservationId(), e.userId(), e.userType(), e.movieId(), e.showroomId(), e.showtimeId(),
+                    e.showroomSeatId(), e.status(), e.expiresAt());
+            case ReservationCancelled e -> applyReservationStatusChange(
+                    e.reservationId(), e.userId(), e.userType(), e.movieId(), e.showroomId(), e.showtimeId(),
+                    e.showroomSeatId(), e.status(), e.expiresAt());
+            case ReservationExpired e -> applyReservationStatusChange(
+                    e.reservationId(), e.userId(), e.userType(), e.movieId(), e.showroomId(), e.showtimeId(),
+                    e.showroomSeatId(), e.status(), e.expiresAt());
+            case PaymentRecorded e -> createPayment(e);
         }
     }
 
@@ -187,5 +211,53 @@ public class MovieEventWorker {
         movieShowtimeRepository.deleteByMovieIdAndShowroomIdAndShowtimeId(
                 e.movieId(), e.showroomId(), e.showtimeId());
         showtimeRepository.deleteById(e.showtimeId());
+    }
+
+    private void createReservation(ReservationCreated e) {
+        try {
+            reservationRepository.save(new Reservation(
+                    e.reservationId(), e.userId(), e.userType(), e.movieId(), e.showroomId(), e.showtimeId(),
+                    e.showroomSeatId(), e.status(), e.expiresAt()));
+        } catch (DataIntegrityViolationException ex) {
+            // Redelivery of an already-applied write is expected and harmless.
+        }
+    }
+
+    /**
+     * Shared by ReservationConfirmed/Cancelled/Expired — same handling
+     * regardless of which transition it is: update the row if it
+     * exists, or create it directly in its current state if the CREATE
+     * event for this id hasn't landed yet (possible under Kafka's
+     * at-least-once delivery), rather than lose the transition.
+     */
+    private void applyReservationStatusChange(
+            UUID reservationId,
+            UUID userId,
+            ReservationUserType userType,
+            UUID movieId,
+            UUID showroomId,
+            UUID showtimeId,
+            UUID showroomSeatId,
+            ReservationStatus status,
+            OffsetDateTime expiresAt) {
+        reservationRepository
+                .findById(reservationId)
+                .ifPresentOrElse(
+                        reservation -> {
+                            reservation.applyStatus(status, expiresAt);
+                            reservationRepository.save(reservation);
+                        },
+                        () -> reservationRepository.save(new Reservation(
+                                reservationId, userId, userType, movieId, showroomId, showtimeId, showroomSeatId,
+                                status, expiresAt)));
+    }
+
+    private void createPayment(PaymentRecorded e) {
+        try {
+            paymentRepository.save(
+                    new Payment(e.paymentId(), e.reservationId(), e.amount(), e.status(), e.providerReference()));
+        } catch (DataIntegrityViolationException ex) {
+            // Redelivery of an already-applied write is expected and harmless.
+        }
     }
 }
