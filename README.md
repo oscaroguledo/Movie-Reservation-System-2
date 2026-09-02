@@ -1,6 +1,16 @@
 # Movie Reservation System
 
 [![CI](https://github.com/oscaroguledo/Movie-Reservation-System-2/actions/workflows/ci.yml/badge.svg)](https://github.com/oscaroguledo/Movie-Reservation-System-2/actions/workflows/ci.yml)
+![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2-6DB33F?logo=springboot&logoColor=white)
+![Gradle](https://img.shields.io/badge/Gradle-8.6-02303A?logo=gradle&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Flyway](https://img.shields.io/badge/Flyway-9.22-CC0200?logo=flyway&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-7-DC382D?logo=redis&logoColor=white)
+![Kafka](https://img.shields.io/badge/Apache%20Kafka-3.8-231F20?logo=apachekafka&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![JUnit5](https://img.shields.io/badge/JUnit-5-25A162?logo=junit5&logoColor=white)
+![Testcontainers](https://img.shields.io/badge/Testcontainers-1.20-1D63ED?logo=testcontainers&logoColor=white)
 
 A Java / Spring Boot backend for a movie reservation service: two
 services (`auth-api`, `movie-api`) sharing a cache-aside +
@@ -120,14 +130,22 @@ call returns `402`; cancelling a `CONFIRMED` reservation auto-refunds.
 
 ## Tech stack
 
-- **Java 21**, **Spring Boot 3.2**, Gradle multi-module build
-- **Postgres 16** + Flyway (schema is the system of record)
-- **Redis 7** (cache-aside + the seat-lock/overlap concurrency guards above)
-- **Kafka 3.8** (KRaft mode, no ZooKeeper)
-- **Spring Security** + JWT (`io.jsonwebtoken`), Argon2id password hashing
-  (`Argon2PasswordEncoder`) in `auth-api`
-- **Testcontainers** + JUnit 5 + AssertJ + Mockito + Awaitility for
-  integration tests against real Postgres/Redis/Kafka containers
+| Layer | Tool | Version | Role |
+|---|---|---|---|
+| Language | [Java](https://openjdk.org/) | 21 | Both modules target the same Gradle toolchain version |
+| Framework | [Spring Boot](https://spring.io/projects/spring-boot) | 3.2.3 | Web layer, dependency injection, auto-configuration |
+| Build | [Gradle](https://gradle.org/) | 8.6 | Multi-module build — root `settings.gradle` + `auth-api`/`movie-api` |
+| Durable storage | [PostgreSQL](https://www.postgresql.org/) | 16 | Source of truth for both services (`org.postgresql:postgresql` driver 42.6.1) |
+| ORM | Spring Data JPA / Hibernate | Boot-managed | Entity mapping; `ddl-auto: validate` — Flyway owns the schema, not Hibernate |
+| Migrations | [Flyway](https://flywaydb.org/) | 9.22.3 | Owns both services' schemas (`auth_api` / `movie_api`), applied on app startup |
+| Cache / fast path | [Redis](https://redis.io/) | 7 | Cache-aside reads, seat-hold + schedule locks, rate-limit state (Spring Data Redis / Lettuce) |
+| Event bus | [Apache Kafka](https://kafka.apache.org/) | 3.8 (KRaft), client 3.6.1 | Durable write pipeline from API → in-process worker → Postgres (`spring-kafka`) |
+| Auth | [jjwt](https://github.com/jwtk/jjwt) + Argon2id | 0.12.6 / Spring Security Crypto | Token issuing/verification (`auth-api`), password hashing (`Argon2PasswordEncoder` + BouncyCastle 1.78.1) |
+| Security | Spring Security | Boot-managed | `auth-api`: full request authentication; `movie-api`: JWT verification + `@PreAuthorize` |
+| Testing | JUnit 5, AssertJ, Mockito, Awaitility | 5.10.2 / 3.24.2 / 5.7.0 / 4.2.0 | Unit and integration tests |
+| Integration testing | [Testcontainers](https://testcontainers.com/) | 1.20.4 | Real Postgres/Redis/Kafka containers, both in CI and locally |
+| Containerization | Docker Compose | — | Full local stack: both services, Postgres, Redis, Kafka |
+| CI | GitHub Actions | — | Build and full test suite for both modules on every push |
 
 ## Project structure
 
