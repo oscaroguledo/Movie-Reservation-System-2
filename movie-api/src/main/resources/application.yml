@@ -35,6 +35,10 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: movie.event
+    listener:
+      # MovieEventWorker acks manually — only a DB-unavailable failure
+      # should leave a message unacknowledged for redelivery.
+      ack-mode: manual_immediate
 
 server:
   port: 8081
